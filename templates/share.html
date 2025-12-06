@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+
+<style>
+/* Center the form container */
+.row {
+    margin-top: 20px;
+}
+
+/* Card styling */
+
+.card {
+    background-color: #FAF7F2;   /* soft cream */
+    border-radius: 14px;
+    padding: 25px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Inner spacing */
+.card-body {
+    padding: 2rem;
+}
+
+/* Better textarea */
+textarea.form-control {
+    min-height: 150px;
+    resize: vertical;
+    font-family: monospace;
+}
+
+/* OR Divider line */
+.text-center.text-muted.my-2 {
+    position: relative;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
+.text-center.text-muted.my-2::before,
+.text-center.text-muted.my-2::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #ccc;
+}
+
+.text-center.text-muted.my-2::before {
+    left: 0;
+}
+
+.text-center.text-muted.my-2::after {
+    right: 0;
+}
+
+/* Button */
+.btn-success {
+    font-weight: 600;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    transition: 0.15s ease-in-out;
+}
+
+.btn-success:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* Mobile padding fix */
+@media (max-width: 576px) {
+    .card-body {
+        padding: 1.4rem;
+    }
+}
+</style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h2 class="mb-3">Create a New Share</h2>
+        <p class="text-muted">Paste text or upload a file. You can also set when the link should expire.</p>
+
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="card shadow-sm">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Text (optional)</label>
+                    <textarea name="text" class="form-control" rows="5" placeholder="Paste your text, notes, or code here..."></textarea>
+                </div>
+
+                <div class="text-center text-muted my-2">OR</div>
+
+                <div class="mb-3">
+                    <label class="form-label">File (optional)</label>
+                    <input type="file" name="file" class="form-control">
+                    <div class="form-text">Max size 50 MB.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Expiry time</label>
+                    <select name="expiry" class="form-select">
+                        <option value="15m">15 minutes</option>
+                        <option value="1h">1 hour</option>
+                        <option value="1d" selected>1 day</option>
+                        <option value="7d">7 days</option>
+                        <option value="never">Never</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-success">Create Share</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

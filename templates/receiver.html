@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <h2 class="mb-3">Shared Item</h2>
+
+        {% if item.kind == "text" %}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="fw-bold">Shared Text</h5>
+
+                    <pre id="sharedText" class="p-3 bg-light border rounded">{{ item.content }}</pre>
+
+                    <button class="btn btn-secondary mt-2" onclick="copySharedText()">
+                        Copy Text
+                    </button>
+                </div>
+            </div>
+
+        {% elif item.kind == "file" %}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="fw-bold">Shared File</h5>
+                    <p><b>Filename:</b> {{ item.original_name }}</p>
+
+                    <a class="btn btn-success"
+                       href="{{ url_for('download_file', item_id=item.id) }}">
+                       Download File
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+function copySharedText() {
+    const text = document.getElementById("sharedText").innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Text copied!");
+    });
+}
+</script>
+
+{% endblock %}

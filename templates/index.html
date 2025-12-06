@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+
+/* --- HERO SECTION --- */
+.hero-title {
+    font-weight: 800;
+    color: #1a3c6e;
+}
+
+.hero-sub {
+    font-size: 1.15rem;
+    color: #444;
+}
+
+/* --- FEATURE BOXES --- */
+.feature-box {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-box:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+
+.feature-box h5 {
+    color: #244c88;
+    font-weight: 700;
+}
+
+/* Divider line */
+.section-divider {
+    margin: 3rem 0;
+    border-top: 2px solid #ddd;
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9 text-center">
+
+        <!-- HERO TITLE -->
+        <h1 class="display-5 fw-bold hero-title">ShareBox</h1>
+
+        <!-- SUBTEXT -->
+        <p class="lead hero-sub mb-4">
+            Share text notes and files instantly — no phone number required.  
+            100% secure, fast, and simple. Just share a link or a 5-digit code.
+        </p>
+
+        <!-- CTA BUTTON -->
+        <a href="{{ url_for('share') }}" class="btn btn-primary btn-lg px-4">Start Sharing</a>
+
+        <!-- DIVIDER -->
+        <hr class="section-divider">
+
+        <!-- FEATURES -->
+        <div class="row g-4 text-start">
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <h5>💬 Pastebin-Style Text</h5>
+                    <p>Share clean, readable text — notes, code, and messages with zero effort.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <h5>📁 Share Files Securely</h5>
+                    <p>Upload documents, images, and files up to 50MB. Each share gets its own private link.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <h5>🔐 Full Privacy & Safety</h5>
+                    <p>Your data is never stored permanently. Auto-expiring links ensure full security.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <h5>📵 No Phone Number Needed</h5>
+                    <p>Share anything without revealing your identity — no sign-up, no mobile number.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <h5>🔢 5-Digit Receiver Code</h5>
+                    <p>Receivers only need a simple 5-digit code to instantly access shared content.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <h5>📱 QR Code Ready</h5>
+                    <p>Every share comes with a scannable QR code for quick access on any device.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

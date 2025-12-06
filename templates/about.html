@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+/* --- About Page Styling --- */
+
+.about-container {
+    background: #ffffff;
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    border: 1px solid #eee;
+    animation: fadeIn 0.5s ease;
+}
+
+/* Headings */
+.about-container h2 {
+    font-weight: 700;
+    color: #1a3c6e;
+}
+
+.about-container h4 {
+    margin-top: 25px;
+    font-weight: 600;
+    color: #244c88;
+}
+
+/* Paragraph text */
+.about-container p {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #444;
+}
+
+/* List styling */
+.about-container ul {
+    padding-left: 20px;
+    margin-top: 10px;
+}
+
+.about-container ul li {
+    margin-bottom: 8px;
+    font-size: 1.05rem;
+    color: #333;
+}
+
+.about-container ul li strong {
+    color: #0d6efd;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 about-container">
+
+        <h2 class="mb-3">About ShareBox</h2>
+
+        <p>
+            <strong>ShareBox</strong> is a fast, secure, and user-friendly sharing platform built with
+            <span class="fw-semibold">Python (Flask)</span> and <span class="fw-semibold">Bootstrap</span>.
+            Started in <strong>2024</strong>, it now supports over <strong>20,000+ trusted users</strong> worldwide.
+            ShareBox lets you share text or files instantly—no phone number, no account, no hassle.
+        </p>
+
+        <p>
+            Our goal is simple: make sharing <strong>instant, private, and effortless</strong>. Whether you're sending
+            notes, code snippets, documents, or images — ShareBox creates a secure, fast-access link that you can share anywhere.
+        </p>
+
+        <h4>Why ShareBox?</h4>
+        <ul>
+            <li><strong>Fast:</strong> Create & share in seconds.</li>
+            <li><strong>Secure:</strong> Auto-expiring links protect your data.</li>
+            <li><strong>Easy:</strong> No login, no setup required.</li>
+            <li><strong>No phone number needed:</strong> Share with a short code.</li>
+            <li><strong>20k+ users trust ShareBox</strong> for daily sharing.</li>
+            <li><strong>QR Code support:</strong> Perfect for mobile access.</li>
+        </ul>
+
+        <h4>Our Mission</h4>
+        <p>
+            Our mission is to make global sharing seamless. ShareBox helps people
+            <strong>connect instantly, safely, and effortlessly worldwide</strong>—breaking communication barriers.
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}

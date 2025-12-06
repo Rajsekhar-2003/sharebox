@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+.receiver-box {
+    margin-top: 80px;
+    text-align: center;
+}
+
+.receiver-box h1 {
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 25px;
+}
+
+.receiver-input {
+    width: 260px;
+    height: 48px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    padding-left: 12px;
+}
+
+.btn-fetch {
+    height: 48px;
+    padding: 0 20px;
+    margin-left: 10px;
+    font-size: 1rem;
+    border-radius: 10px;
+    background-color: #4582EC;
+    color: white;
+    border: none;
+}
+
+.btn-fetch:hover {
+    background-color: #2F6CD4;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="receiver-box">
+    <h1>Receive Shared Text</h1>
+
+    <form method="get" action="{{ url_for('receiver_home') }}">
+        <input type="text" name="code" class="receiver-input"
+               placeholder="Enter 4-digit code" maxlength="4" required>
+
+        <button class="btn-fetch">Fetch</button>
+    </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+
+/* Page Title */
+h2 {
+    font-weight: 700;
+    color: #3A5A78;
+}
+
+/* Card Styling */
+.card {
+    border: none;
+    border-radius: 14px;
+    background-color: #7b87bcff; /* Elegant cream */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.card-body {
+    padding: 1.6rem;
+}
+
+/* Share link input */
+.input-group input {
+    border-radius: 8px 0 0 8px !important;
+}
+
+.input-group .btn {
+    border-radius: 0 8px 8px 0 !important;
+}
+
+/* Text area style */
+pre {
+    background: #F2F4F7 !important;
+    border-radius: 10px;
+    padding: 1rem;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Button styling */
+.btn-primary {
+    background-color: #3B82F6;
+    border-color: #3B82F6;
+}
+
+.btn-primary:hover {
+    background-color: #2563EB;
+}
+
+.btn-secondary {
+    background-color: #6B7280;
+    border-color: #6B7280;
+}
+
+.btn-secondary:hover {
+    background-color: #4B5563;
+}
+
+/* Success button */
+.btn-success {
+    font-weight: 600;
+    padding: 0.55rem 1.3rem;
+    border-radius: 8px;
+}
+
+/* QR Code Styling */
+.qr-code img {
+    border-radius: 8px;
+    padding: 6px;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Expiry text */
+.expiry-text {
+    color: #6B7280;
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <h2 class="mb-3">Shared Item</h2>
+
+        <!-- Share Link -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <label class="form-label fw-bold">Share Link</label>
+                <div class="input-group">
+                    <input id="shareLink" type="text" class="form-control" value="{{ share_url }}" readonly>
+                    <button class="btn btn-primary" onclick="copyLink()">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="text-center my-3 qr-code">
+            <img src="{{ url_for('qrcode_image', item_id=item['id']) }}" width="160">
+            <p class="text-muted small">Scan to open</p>
+        </div>
+
+        <!-- TEXT SECTION -->
+        {% if item.kind == "text" %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="fw-bold mb-2">Shared Text</h5>
+                <pre>{{ item.content }}</pre>
+                <button class="btn btn-secondary mt-2" onclick="copyText()">Copy Text</button>
+            </div>
+        </div>
+
+        <!-- FILE SECTION -->
+        {% elif item.kind == "file" %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="fw-bold">Shared File</h5>
+                <p class="mb-1"><strong>Filename:</strong> {{ item.original_name }}</p>
+
+                <a class="btn btn-success mt-2"
+                   href="{{ url_for('download_file', item_id=item['id']) }}">
+                    Download File
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Expiry -->
+        <p class="expiry-text mt-3 small">
+            {% if item.expires_at %}
+                Expires at: {{ item.expires_at|datetimeformat }}
+            {% else %}
+                Never expires
+            {% endif %}
+        </p>
+
+    </div>
+</div>
+
+<script>
+function copyLink() {
+    navigator.clipboard.writeText(document.getElementById("shareLink").value);
+    alert("Link copied!");
+}
+
+function copyText() {
+    const text = document.querySelector("pre").innerText;
+    navigator.clipboard.writeText(text);
+    alert("Text copied!");
+}
+</script>
+
+{% endblock %}
