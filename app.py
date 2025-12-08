@@ -94,7 +94,7 @@ def cleanup_expired():
 #def generate_id():
     #return uuid.uuid4().hex[:4]
 def generate_id():
-    return str(random.randint(10000, 99999))
+    return str(random.randint(1000, 9999))
 
 
 EXPIRY_OPTIONS = {
