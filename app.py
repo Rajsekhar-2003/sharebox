@@ -1,226 +1,160 @@
-
 import os
-import sqlite3
-import time
 import uuid
-import random
+import sqlite3
+from datetime import datetime, timedelta
+from io import BytesIO
 
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, send_from_directory, abort, g, send_file
+    url_for, send_from_directory, abort, send_file
 )
-
+from werkzeug.utils import secure_filename
 import qrcode
-from io import BytesIO
-from datetime import datetime
 
+# -------------------------------------------------
+# CONFIG
+# -------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this")
+
 app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "uploads")
-app.config["DATABASE"] = os.path.join(BASE_DIR, "instance", "sharebox.db")
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB max upload
-
-# Ensure folders exist
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-os.makedirs(os.path.dirname(app.config["DATABASE"]), exist_ok=True)
 
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
-# -----------------------------
-# Database helpers
-# -----------------------------
+DB_PATH = os.path.join(BASE_DIR, "app.db")
+
+# -------------------------------------------------
+# DATABASE (sqlite3)
+# -------------------------------------------------
 def get_db():
-    if "db" not in g:
-        g.db = sqlite3.connect(app.config["DATABASE"])
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(exception):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
-
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
-    db = get_db()
-    db.execute(
-        """
+    with get_db() as db:
+        db.execute("""
         CREATE TABLE IF NOT EXISTS items (
             id TEXT PRIMARY KEY,
             kind TEXT NOT NULL,
             filename TEXT,
             original_name TEXT,
             content TEXT,
-            created_at INTEGER NOT NULL,
-            expires_at INTEGER
-        );
-        """
-    )
-    db.commit()
+            created_at TEXT,
+            expires_at TEXT
+        )
+        """)
 
+init_db()
 
-@app.before_request
-def before_request():
-    init_db()
-    cleanup_expired()
-
-
-def cleanup_expired():
-    """Delete expired items and their files."""
-    now = int(time.time())
-    db = get_db()
-    cur = db.execute(
-        "SELECT id, kind, filename FROM items WHERE expires_at IS NOT NULL AND expires_at < ?",
-        (now,),
-    )
-    rows = cur.fetchall()
-    for row in rows:
-        if row["kind"] == "file" and row["filename"]:
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], row["filename"])
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except OSError:
-                    pass
-    db.execute("DELETE FROM items WHERE expires_at IS NOT NULL AND expires_at < ?", (now,))
-    db.commit()
-
-
-# -----------------------------
-# Utility functions
-# -----------------------------
-#def generate_id():
-    #return uuid.uuid4().hex[:4]
+# -------------------------------------------------
+# HELPERS
+# -------------------------------------------------
 def generate_id():
-    return str(random.randint(1000, 9999))
-
+    return f"{uuid.uuid4().int % 1000000:06d}"
 
 EXPIRY_OPTIONS = {
-    "15m": 15 * 60,
-    "1h": 60 * 60,
-    "1d": 24 * 60 * 60,
-    "7d": 7 * 24 * 60 * 60,
-    "never": None,
+    "15m": timedelta(minutes=15),
+    "1h": timedelta(hours=1),
+    "1d": timedelta(days=1),
+    "7d": timedelta(days=7),
+    "30d": timedelta(days=30),
 }
 
-
-def get_expiry_timestamp(option_key):
-    now = int(time.time())
-    seconds = EXPIRY_OPTIONS.get(option_key)
-    if seconds is None:
+def get_expiry(key):
+    if key == "never":
         return None
-    return now + seconds
-
+    return datetime.utcnow() + EXPIRY_OPTIONS.get(key, timedelta(days=1))
 
 @app.template_filter("datetimeformat")
 def datetimeformat(value):
-    try:
-        return datetime.fromtimestamp(int(value)).strftime("%Y-%m-%d %H:%M")
-    except Exception:
-        return ""
+    return value[:16] if value else ""
 
-
-# -----------------------------
-# Routes
-# -----------------------------
+# -------------------------------------------------
+# ROUTES (SHARE)
+# -------------------------------------------------
 @app.route("/home")
 def index():
     return render_template("index.html")
 
-
 @app.route("/", methods=["GET", "POST"])
 def share():
     if request.method == "POST":
-        text_content = (request.form.get("text") or "").strip()
-        expiry_option = request.form.get("expiry", "1d")
-        expires_at = get_expiry_timestamp(expiry_option)
-
+        text = (request.form.get("text") or "").strip()
+        expiry = request.form.get("expiry", "1d")
         file = request.files.get("file")
-        db = get_db()
+
+        if not text and not file:
+            return render_template("share.html", error="Provide text or file")
+
         item_id = generate_id()
-        now = int(time.time())
+        expires_at = get_expiry(expiry)
+
+        stored_name = None
+        safe_name = None
 
         if file and file.filename:
-            stored_name = f"{item_id}_{file.filename}"
+            safe_name = secure_filename(file.filename)
+            stored_name = f"{item_id}_{safe_name}"
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], stored_name))
 
-            db.execute(
-                "INSERT INTO items (id, kind, filename, original_name, content, created_at, expires_at) "
-                "VALUES (?, 'file', ?, ?, NULL, ?, ?)",
-                (item_id, stored_name, file.filename, now, expires_at),
-            )
-            db.commit()
-            return redirect(url_for("view_item", item_id=item_id))
+        with get_db() as db:
+            db.execute("""
+                INSERT INTO items (
+                    id, kind, filename, original_name,
+                    content, created_at, expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                item_id,
+                "file" if file else "text",
+                stored_name,
+                safe_name,
+                text if text else None,
+                datetime.utcnow().isoformat(),
+                expires_at.isoformat() if expires_at else None
+            ))
 
-        if text_content:
-            db.execute(
-                "INSERT INTO items (id, kind, filename, original_name, content, created_at, expires_at) "
-                "VALUES (?, 'text', NULL, NULL, ?, ?, ?)",
-                (item_id, text_content, now, expires_at),
-            )
-            db.commit()
-            return redirect(url_for("view_item", item_id=item_id))
-
-        return render_template("share.html", error="Please enter text or choose a file.")
+        return redirect(url_for("view_item", item_id=item_id))
 
     return render_template("share.html")
 
-
 @app.route("/<item_id>")
 def view_item(item_id):
-    db = get_db()
-    cur = db.execute("SELECT * FROM items WHERE id = ?", (item_id,))
-    item = cur.fetchone()
-    if item is None:
-        abort(404)
+    with get_db() as db:
+        item = db.execute(
+            "SELECT * FROM items WHERE id = ?",
+            (item_id,)
+        ).fetchone()
 
-    # Check expiry at view-time too
-    if item["expires_at"] is not None and item["expires_at"] < int(time.time()):
-        if item["kind"] == "file" and item["filename"]:
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], item["filename"])
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except OSError:
-                    pass
-        db.execute("DELETE FROM items WHERE id = ?", (item_id,))
-        db.commit()
+    if not item:
         abort(404)
 
     share_url = url_for("view_item", item_id=item_id, _external=True)
     return render_template("view_item.html", item=item, share_url=share_url)
 
-
 @app.route("/download/<item_id>")
 def download_file(item_id):
-    db = get_db()
-    cur = db.execute("SELECT * FROM items WHERE id = ? AND kind = 'file'", (item_id,))
-    item = cur.fetchone()
-    if item is None:
-        abort(404)
+    with get_db() as db:
+        item = db.execute(
+            "SELECT * FROM items WHERE id = ? AND kind = 'file'",
+            (item_id,)
+        ).fetchone()
 
-    if item["expires_at"] is not None and item["expires_at"] < int(time.time()):
+    if not item:
         abort(404)
 
     return send_from_directory(
         app.config["UPLOAD_FOLDER"],
         item["filename"],
         as_attachment=True,
-        download_name=item["original_name"],
+        download_name=item["original_name"]
     )
-
-
 
 @app.route("/qrcode/<item_id>")
 def qrcode_image(item_id):
-    db = get_db()
-    cur = db.execute("SELECT id FROM items WHERE id = ?", (item_id,))
-    item = cur.fetchone()
-    if item is None:
-        abort(404)
-
     share_url = url_for("view_item", item_id=item_id, _external=True)
     img = qrcode.make(share_url)
     buf = BytesIO()
@@ -231,7 +165,10 @@ def qrcode_image(item_id):
 @app.route("/about")
 def about():
     return render_template("about.html")
-# Receiver input page
+
+# -------------------------------------------------
+# RECEIVER
+# -------------------------------------------------
 @app.route("/receiver")
 def receiver_home():
     code = request.args.get("code")
@@ -239,34 +176,64 @@ def receiver_home():
         return redirect(url_for("receiver_item", item_id=code))
     return render_template("receiver_home.html")
 
-
-# Fetch the shared item
 @app.route("/receiver/<item_id>")
 def receiver_item(item_id):
-    db = get_db()
-    cur = db.execute("SELECT * FROM items WHERE id = ?", (item_id,))
-    item = cur.fetchone()
+    with get_db() as db:
+        item = db.execute(
+            "SELECT * FROM items WHERE id = ?",
+            (item_id,)
+        ).fetchone()
 
-    if item is None:
-        abort(404)
-
-    if item["expires_at"] and item["expires_at"] < int(time.time()):
+    if not item:
         abort(404)
 
     return render_template("receiver.html", item=item)
 
+# -------------------------------------------------
+# CHAT
+# -------------------------------------------------
+@app.route("/chat")
+def chat_index():
+    return render_template("chat_index.html")
 
+@app.route("/chat/room/<room_code>")
+def chat_room(room_code):
+    username = request.args.get("username", "").strip()
+    if not username or len(username) > 50 or len(room_code) != 5:
+        return redirect(url_for("chat_index"))
+    return render_template(
+        "chat_room.html",
+        room_code=room_code,
+        username=username
+    )
 
+# -------------------------------------------------
+# CLEANUP
+# -------------------------------------------------
+def cleanup_expired():
+    now = datetime.utcnow().isoformat()
 
+    with get_db() as db:
+        expired = db.execute("""
+            SELECT * FROM items
+            WHERE expires_at IS NOT NULL AND expires_at < ?
+        """, (now,)).fetchall()
 
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template("404.html"), 404
+        for item in expired:
+            if item["kind"] == "file" and item["filename"]:
+                try:
+                    os.remove(os.path.join(app.config["UPLOAD_FOLDER"], item["filename"]))
+                except:
+                    pass
 
+            db.execute("DELETE FROM items WHERE id = ?", (item["id"],))
 
-
-
-
+# -------------------------------------------------
+# START
+# -------------------------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080)),
+        debug=False
+    )
